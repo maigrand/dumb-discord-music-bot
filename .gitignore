@@ -1,0 +1,8 @@
+node_modules/
+.idea/
+.history/
+.env
+dist/
+.stfolder/
+.stignore
+.env
