@@ -42,7 +42,8 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
 
     const title = searchResult.playlist ? searchResult.playlist.title : searchResult.tracks[0].title
     await interaction.reply({
-        content: `loading ${title}`
+        content: `loading ${title}`,
+        ephemeral: true
     })
 
     if (!queue.playing) {
