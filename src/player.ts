@@ -59,6 +59,7 @@ export async function skip(discordClient: DiscordClient, interaction: ChatInputC
     queue.skip()
 
     await interaction.reply({
-        content: `skipped song`
+        content: `skipped song`,
+        ephemeral: true
     })
 }
