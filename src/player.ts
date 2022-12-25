@@ -49,3 +49,15 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
         await queue.play()
     }
 }
+
+export async function skip(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
+    const guild = discordClient.client.guilds.cache.get(interaction.guildId)
+    const channel = guild.channels.cache.get(interaction.channelId) as TextChannel
+    const queue = await discordClient.getQueue(guild, channel)
+
+    queue.skip()
+
+    await interaction.reply({
+        content: `skipped song`
+    })
+}

@@ -2,7 +2,7 @@ import 'dotenv/config'
 import {DiscordClient} from './client'
 import {Events} from 'discord.js'
 import {commandsNames} from './register-slash-commands'
-import {play} from './player'
+import {play, skip} from './player'
 
 const start = async () => {
     try {
@@ -24,6 +24,8 @@ const start = async () => {
 
             if (interaction.commandName === 'play') {
                 await play(discordClient, interaction)
+            } else if (interaction.commandName === 'skip') {
+                await skip(discordClient, interaction)
             }
         })
 
