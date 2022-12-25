@@ -60,6 +60,9 @@ export async function skip(discordClient: DiscordClient, interaction: ChatInputC
 
     await interaction.reply({
         content: `skipped song`,
-        ephemeral: true
     })
+
+    setTimeout(() => {
+        interaction.deleteReply()
+    }, 10000)
 }
