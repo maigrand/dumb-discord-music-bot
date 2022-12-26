@@ -6,3 +6,4 @@ dist/
 .stfolder/
 .stignore
 .env
+options.json
