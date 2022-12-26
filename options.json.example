@@ -1,0 +1,15 @@
+{
+  "queueInit": {
+    "leaveOnEnd": false,
+    "leaveOnStop": false,
+    "leaveOnEmpty": true,
+    "leaveOnEmptyCooldown": 300000,
+    "leaveOnEndCooldown": 1000,
+    "autoSelfDeaf": true,
+    "initialVolume": 20,
+    "bufferingTimeout": 3000,
+    "spotifyBridge": true,
+    "disableVolume": false,
+    "volumeSmoothness": 0.5
+  }
+}

@@ -1,5 +1,6 @@
 import {Client, Guild, GuildMember, IntentsBitField, Partials, TextChannel} from 'discord.js'
 import {Player, Queue} from 'discord-player'
+import { queueInit } from '../options.json'
 
 const TOKEN = process.env.DISCORD_TOKEN
 
@@ -53,22 +54,12 @@ export class DiscordClient {
 
     public getQueue(guild: Guild, channel: TextChannel): Queue<IQueue> {
         return this.player.createQueue(guild, {
-            leaveOnEnd: false,
-            leaveOnStop: false,
-            leaveOnEmpty: false,
-            leaveOnEmptyCooldown: 1000,
-            leaveOnEndCooldown: 1000,
-            autoSelfDeaf: true,
+            ...queueInit,
             ytdlOptions: {
                 filter: 'audioonly',
                 highWaterMark: 1 << 30,
                 dlChunkSize: 0,
             },
-            initialVolume: 20,
-            bufferingTimeout: 3000,
-            spotifyBridge: true,
-            disableVolume: false,
-            volumeSmoothness: 0.5,
             metadata: {
                 channel: channel
             }
