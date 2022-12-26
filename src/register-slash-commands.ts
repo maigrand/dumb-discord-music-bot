@@ -33,6 +33,9 @@ const commands = [
     {
         name: 'register',
         description: 'admin only'
+    },
+    {
+        name: 'history'
     }
 ]
 
@@ -57,6 +60,9 @@ const commands2 = [
     new SlashCommandBuilder()
         .setName('nowplaying')
         .setDescription('Now playing song'),
+    new SlashCommandBuilder()
+        .setName('history')
+        .setDescription('Show 20 last tracks'),
     new SlashCommandBuilder()
         .setName('register')
         .setDescription('admin only')

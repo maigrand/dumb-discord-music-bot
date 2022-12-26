@@ -68,11 +68,21 @@ export class DiscordClient {
 
     private currentTrack: ICurrentTrack
 
+    private history: ICurrentTrack[] = []
+
     public getCurrentTrack(): ICurrentTrack {
         return this.currentTrack
     }
 
     public setCurrentTrack(currentTrack: ICurrentTrack): void {
         this.currentTrack = currentTrack
+        this.history.push(currentTrack)
+        if (this.history.length > 20) {
+            this.history.shift()
+        }
+    }
+
+    public getHistory(): ICurrentTrack[] {
+        return this.history
     }
 }

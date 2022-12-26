@@ -36,6 +36,7 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
         await interaction.reply({
             content: 'Could not join your voice channel!'
         })
+        return
     }
 
     searchResult.playlist ? queue.addTracks(searchResult.tracks) : queue.addTrack(searchResult.tracks[0])
@@ -69,7 +70,30 @@ export async function skip(discordClient: DiscordClient, interaction: ChatInputC
 
 export async function nowPlaying(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
     const currentTrack = discordClient.getCurrentTrack()
+    if (!currentTrack) {
+        await interaction.reply( {
+            content: 'nothing',
+            ephemeral: true
+        })
+        return
+    }
     await interaction.reply({
-        content: `${currentTrack.title} requested by WIP`
+        content: `${currentTrack.title} requested by WIP`,
+        ephemeral: true
+    })
+}
+
+export async function history(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply({ ephemeral: true })
+    const history = discordClient.getHistory()
+    if (history.length == 0) {
+        await interaction.editReply({
+            content: 'empty'
+        })
+        return
+    }
+    const interactionContent = history.map((track, index) => `${index+1}) ${track.title}\n`)
+    await interaction.editReply({
+        content: interactionContent.toString()
     })
 }
