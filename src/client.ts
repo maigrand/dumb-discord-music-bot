@@ -1,10 +1,15 @@
-import {Client, Guild, IntentsBitField, Partials, TextChannel} from 'discord.js'
+import {Client, Guild, GuildMember, IntentsBitField, Partials, TextChannel} from 'discord.js'
 import {Player, Queue} from 'discord-player'
 
 const TOKEN = process.env.DISCORD_TOKEN
 
 type IQueue = {
     channel: TextChannel | null
+}
+
+type ICurrentTrack = {
+    title: string
+    //author: GuildMember
 }
 
 export class DiscordClient {
@@ -42,6 +47,7 @@ export class DiscordClient {
         })
         this.player.on('trackStart', async (queue: Queue<IQueue>, track) => {
             await queue.metadata.channel.send(`🎶 | Now playing **${track.title}**!`)
+            await this.setCurrentTrack({title: track.title})
         })
     }
 
@@ -67,5 +73,15 @@ export class DiscordClient {
                 channel: channel
             }
         })
+    }
+
+    private currentTrack: ICurrentTrack
+
+    public getCurrentTrack(): ICurrentTrack {
+        return this.currentTrack
+    }
+
+    public setCurrentTrack(currentTrack: ICurrentTrack): void {
+        this.currentTrack = currentTrack
     }
 }

@@ -66,3 +66,10 @@ export async function skip(discordClient: DiscordClient, interaction: ChatInputC
         interaction.deleteReply()
     }, 10000)
 }
+
+export async function nowPlaying(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
+    const currentTrack = discordClient.getCurrentTrack()
+    await interaction.reply({
+        content: `${currentTrack.title} requested by WIP`
+    })
+}
