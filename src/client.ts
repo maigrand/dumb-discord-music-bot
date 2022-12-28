@@ -1,6 +1,7 @@
 import {Client, Guild, GuildMember, IntentsBitField, Partials, TextChannel} from 'discord.js'
 import {Player, Queue} from 'discord-player'
 import { queueInit } from '../options.json'
+import {musicEmbed} from './embed'
 
 const TOKEN = process.env.DISCORD_TOKEN
 
@@ -47,7 +48,8 @@ export class DiscordClient {
             console.log(`[${queue.guild.name}] Error emitted from the connection: ${error.message}`)
         })
         this.player.on('trackStart', async (queue: Queue<IQueue>, track) => {
-            await queue.metadata.channel.send(`🎶 | Now playing **${track.title}**!`)
+            const emb = await musicEmbed(this, 'Now playing', track.title)
+            await queue.metadata.channel.send({embeds: [emb]})
             await this.setCurrentTrack({title: track.title})
         })
     }

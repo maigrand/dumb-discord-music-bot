@@ -1,6 +1,7 @@
 import {QueryType} from 'discord-player'
 import {ChatInputCommandInteraction, TextChannel} from 'discord.js'
 import {DiscordClient} from './client'
+import {musicEmbed} from './embed'
 
 export async function play(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
     const guild = discordClient.client.guilds.cache.get(interaction.guildId)
@@ -17,8 +18,10 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
         })
 
     if (!searchResult || !searchResult.tracks.length) {
+        const emb = await musicEmbed(discordClient, 'Play Command', `Track ${query} not found`)
         await interaction.reply({
-            content: `❌ | Track **${query}** not found!`
+            embeds: [emb],
+            ephemeral: true
         })
         return
     }
@@ -33,8 +36,10 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
         }
     } catch (e) {
         await discordClient.player.deleteQueue(guild.id)
+        const emb = await musicEmbed(discordClient, 'Play Command', 'Could not join your voice channel!')
         await interaction.reply({
-            content: 'Could not join your voice channel!'
+            embeds: [emb],
+            ephemeral: true
         })
         return
     }
@@ -42,8 +47,9 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
     searchResult.playlist ? queue.addTracks(searchResult.tracks) : queue.addTrack(searchResult.tracks[0])
 
     const title = searchResult.playlist ? searchResult.playlist.title : searchResult.tracks[0].title
+    const emb = await musicEmbed(discordClient, 'Play Command', title)
     await interaction.reply({
-        content: `loading ${title}`,
+        embeds: [emb],
         ephemeral: true
     })
 
@@ -59,8 +65,10 @@ export async function skip(discordClient: DiscordClient, interaction: ChatInputC
 
     queue.skip()
 
+    const currentTrack = discordClient.getCurrentTrack()
+    const emb = await musicEmbed(discordClient, 'Skip command', currentTrack.title)
     await interaction.reply({
-        content: `skipped song`,
+        embeds: [emb]
     })
 
     setTimeout(() => {
@@ -71,14 +79,16 @@ export async function skip(discordClient: DiscordClient, interaction: ChatInputC
 export async function nowPlaying(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
     const currentTrack = discordClient.getCurrentTrack()
     if (!currentTrack) {
+        const emb = await musicEmbed(discordClient, 'Now playing command', 'Nothing played')
         await interaction.reply( {
-            content: 'nothing',
+            embeds: [emb],
             ephemeral: true
         })
         return
     }
+    const emb = await musicEmbed(discordClient, 'Now playing command', `${currentTrack.title}`)
     await interaction.reply({
-        content: `${currentTrack.title} requested by WIP`,
+        embeds: [emb],
         ephemeral: true
     })
 }
@@ -87,13 +97,15 @@ export async function history(discordClient: DiscordClient, interaction: ChatInp
     await interaction.deferReply({ ephemeral: true })
     const history = discordClient.getHistory()
     if (history.length == 0) {
+        const emb = await musicEmbed(discordClient, 'History command', 'Empty history')
         await interaction.editReply({
-            content: 'empty'
+            embeds: [emb]
         })
         return
     }
     const interactionContent = history.map((track, index) => `${index+1}) ${track.title}\n`)
+    const emb = await musicEmbed(discordClient, 'History command', interactionContent.toString())
     await interaction.editReply({
-        content: interactionContent.toString()
+        embeds: [emb]
     })
 }
