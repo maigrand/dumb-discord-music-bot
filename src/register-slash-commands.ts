@@ -1,6 +1,5 @@
 import 'dotenv/config'
-import { REST } from '@discordjs/rest'
-import {Routes, ApplicationCommandOptionType, SlashCommandBuilder, PermissionsBitField} from 'discord.js'
+import {REST, Routes, ApplicationCommandOptionType, SlashCommandBuilder, PermissionsBitField} from 'discord.js'
 
 const TOKEN = process.env.DISCORD_TOKEN
 const CLIENT_ID = process.env.CLIENT_ID
