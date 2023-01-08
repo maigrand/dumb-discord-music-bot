@@ -23,6 +23,11 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
             embeds: [emb],
             ephemeral: true
         })
+
+        setTimeout(() => {
+            interaction.deleteReply()
+        }, 10000)
+
         return
     }
 
@@ -41,6 +46,11 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
             embeds: [emb],
             ephemeral: true
         })
+
+        setTimeout(() => {
+            interaction.deleteReply()
+        }, 10000)
+
         return
     }
 
@@ -52,6 +62,10 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
         embeds: [emb],
         ephemeral: true
     })
+
+    setTimeout(() => {
+        interaction.deleteReply()
+    }, 10000)
 
     if (!queue.playing) {
         await queue.play()
@@ -84,6 +98,11 @@ export async function nowPlaying(discordClient: DiscordClient, interaction: Chat
             embeds: [emb],
             ephemeral: true
         })
+
+        setTimeout(() => {
+            interaction.deleteReply()
+        }, 10000)
+
         return
     }
     const emb = await musicEmbed(discordClient, 'Now playing command', `${currentTrack.title} requested by ${currentTrack.username}`, interaction.user)
@@ -91,6 +110,10 @@ export async function nowPlaying(discordClient: DiscordClient, interaction: Chat
         embeds: [emb],
         ephemeral: true
     })
+
+    setTimeout(() => {
+        interaction.deleteReply()
+    }, 10000)
 }
 
 export async function history(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
@@ -101,6 +124,11 @@ export async function history(discordClient: DiscordClient, interaction: ChatInp
         await interaction.editReply({
             embeds: [emb]
         })
+
+        setTimeout(() => {
+            interaction.deleteReply()
+        }, 10000)
+
         return
     }
     const interactionContent = history.map((track, index) => `${index+1}) ${track.title} requested by ${track.username}\n`)
@@ -108,4 +136,8 @@ export async function history(discordClient: DiscordClient, interaction: ChatInp
     await interaction.editReply({
         embeds: [emb]
     })
+
+    setTimeout(() => {
+        interaction.deleteReply()
+    }, 10000)
 }
