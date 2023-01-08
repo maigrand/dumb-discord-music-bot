@@ -11,7 +11,6 @@ export async function musicEmbed(discordClient: DiscordClient, title, descriptio
     })
     embBuilder.setDescription(description)
     embBuilder.setTimestamp()
-    console.log('us', user)
     embBuilder.setFooter({
         text: user.username,
         iconURL: user.displayAvatarURL() ?? undefined
