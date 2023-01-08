@@ -1,7 +1,8 @@
 import {Client, Guild, IntentsBitField, Partials, TextChannel, User} from 'discord.js'
 import {Player, Queue} from 'discord-player'
-import { queueInit } from '../options.json'
+import { queueInit, redisOptions } from '../options.json'
 import {musicEmbed} from './embed'
+import { createClient } from 'redis'
 
 const TOKEN = process.env.DISCORD_TOKEN
 
@@ -18,6 +19,7 @@ export class DiscordClient {
     constructor () {
         this.login(TOKEN)
         this.registerPlayerEvents()
+        this.redisClient.connect()
     }
 
     public client = new Client({
@@ -31,6 +33,10 @@ export class DiscordClient {
             IntentsBitField.Flags.GuildVoiceStates,
             IntentsBitField.Flags.MessageContent,
         ],
+    })
+
+    public redisClient = createClient({
+        ...redisOptions
     })
 
     private login(token: string) {
@@ -51,6 +57,9 @@ export class DiscordClient {
             const emb = await musicEmbed(this, 'Now playing', track.title, track.requestedBy)
             await queue.metadata.channel.send({embeds: [emb]})
             await this.setCurrentTrack({title: track.title, username: track.requestedBy.username})
+        })
+        this.redisClient.on('error', (e) => {
+            console.error('Redis Client Error:', e)
         })
     }
 

@@ -11,5 +11,11 @@
     "spotifyBridge": true,
     "disableVolume": false,
     "volumeSmoothness": 0.5
+  },
+  "redisOptions": {
+    "socket": {
+      "host": "redis",
+      "port": 6379
+    }
   }
 }
