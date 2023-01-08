@@ -10,7 +10,8 @@ const start = async () => {
         const client = discordClient.client
 
         client.on(Events.ClientReady, async (e) => {
-            console.log(`ready ${client.user.tag}`)
+            const d = new Date()
+            console.log(`${d.toUTCString()} ready ${client.user.tag}`)
         })
 
         client.on(Events.InteractionCreate, async (interaction) => {
