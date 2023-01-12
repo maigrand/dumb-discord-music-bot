@@ -1,3 +1,3 @@
-enum RedisKeys {
+export enum RedisKeys {
     HISTORY = 'history'
 }

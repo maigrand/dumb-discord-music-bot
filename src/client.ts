@@ -3,6 +3,7 @@ import {Player, QueryType, Queue} from 'discord-player'
 import {queueInit, redisOptions} from '../options.json'
 import {musicEmbed} from './embed'
 import {createClient} from 'redis'
+import {RedisKeys} from './redisKeys.enum'
 
 const TOKEN = process.env.DISCORD_TOKEN
 
