@@ -1,37 +1,22 @@
-import {QueryType} from 'discord-player'
+import {PlayerSearchResult, QueryType, Track} from 'discord-player'
 import {ChatInputCommandInteraction, TextChannel} from 'discord.js'
 import {DiscordClient} from './client'
 import {musicEmbed} from './embed'
 import {deleteInteractionReply} from './utils'
+import {RedisKeys} from './redisKeys.enum'
 
 export async function play(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
     const guild = discordClient.client.guilds.cache.get(interaction.guildId)
     const channel = guild.channels.cache.get(interaction.channelId) as TextChannel
     const query = interaction.options.getString('query')
 
-    const searchResult = await discordClient.player
-        .search(query, {
-            requestedBy: interaction.user,
-            searchEngine: QueryType.AUTO
-        })
-        .catch((e) => {
-            console.error('searchResultError: ', e)
-        })
+    const searchResult = await search(discordClient, interaction)
 
-    if (!searchResult || !searchResult.tracks.length) {
-        const emb = await musicEmbed(discordClient, 'Play Command', `Track ${query} not found`, interaction.user)
-        await interaction.reply({
-            embeds: [emb],
-            ephemeral: true
-        })
-
-        deleteInteractionReply(interaction)
-
+    if (!searchResult) {
         return
     }
 
     const queue = await discordClient.getQueue(guild, channel)
-
     const member = guild.members.cache.get(interaction.user.id) ?? await guild.members.fetch(interaction.user.id)
 
     try {
@@ -51,8 +36,15 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
         return
     }
 
-    searchResult.playlist ? queue.addTracks(searchResult.tracks) : queue.addTrack(searchResult.tracks[0])
-    await discordClient.redisClient.sAdd('history', JSON.stringify({
+    if (searchResult.playlist) {
+        for (const track of searchResult.tracks) {
+            await discordClient.redisClient.lPush(RedisKeys.QUEUE, JSON.stringify({...track, source: track.source}))
+        }
+    } else {
+        await discordClient.redisClient.lPush(RedisKeys.QUEUE, JSON.stringify({...searchResult.tracks[0], source: searchResult.tracks[0].source}))
+    }
+
+    await discordClient.redisClient.sAdd(RedisKeys.HISTORY, JSON.stringify({
         title: query,
         username: interaction.user.username
     }))
@@ -67,8 +59,39 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
     deleteInteractionReply(interaction)
 
     if (!queue.playing) {
-        await queue.play()
+        const rawData = await discordClient.redisClient.lPop(RedisKeys.QUEUE)
+        const data = JSON.parse(rawData)
+        const track = new Track(discordClient.player, data)
+        await queue.play(track)
     }
+}
+
+async function search(discordClient: DiscordClient, interaction: ChatInputCommandInteraction): Promise<PlayerSearchResult | null> {
+    const query = interaction.options.getString('query')
+
+    const searchResult = await discordClient.player
+        .search(query, {
+            requestedBy: interaction.user,
+            searchEngine: QueryType.AUTO
+        })
+        .catch((e) => {
+            console.error('searchResultError: ', e)
+            return null
+        })
+
+    if (!searchResult || !searchResult.tracks.length) {
+        const emb = await musicEmbed(discordClient, 'Play Command', `Track ${query} not found`, interaction.user)
+        await interaction.reply({
+            embeds: [emb],
+            ephemeral: true
+        })
+
+        deleteInteractionReply(interaction)
+
+        return null
+    }
+
+    return searchResult
 }
 
 export async function skip(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {

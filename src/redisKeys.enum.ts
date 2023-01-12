@@ -1,3 +1,4 @@
 export enum RedisKeys {
-    HISTORY = 'history'
+    HISTORY = 'history',
+    QUEUE = 'queue'
 }

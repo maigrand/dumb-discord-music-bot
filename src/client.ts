@@ -1,5 +1,5 @@
 import {Client, Guild, IntentsBitField, Partials, TextChannel} from 'discord.js'
-import {Player, QueryType, Queue} from 'discord-player'
+import {Player, QueryType, Queue, Track} from 'discord-player'
 import {queueInit, redisOptions} from '../options.json'
 import {musicEmbed} from './embed'
 import {createClient} from 'redis'
@@ -55,12 +55,24 @@ export class DiscordClient {
             console.log(`[${queue.guild.name}] Error emitted from the connection: ${error.message}`)
         })
         this.player.on('trackStart', async (queue: Queue<IQueue>, track) => {
-            const emb = await musicEmbed(this, 'Now playing', track.title, track.requestedBy)
+            const guildMember = queue.guild.members.cache.get(track.requestedBy.id) ?? await queue.guild.members.fetch(track.requestedBy.id)
+            const user = guildMember.user
+            const emb = await musicEmbed(this, 'Now playing', track.title, user)
             await queue.metadata.channel.send({embeds: [emb]})
-            await this.setCurrentTrack({title: track.title, username: track.requestedBy.username})
+            await this.setCurrentTrack({title: track.title, username: user.username})
         })
-        this.player.on('trackEnd', async (queue: Queue<IQueue>, track) => {
-            //
+        this.player.on('trackEnd', async (queue: Queue<IQueue>, trackEnd) => {
+            const rawData = await this.redisClient.lPop(RedisKeys.QUEUE)
+            if (!rawData) {
+                return
+            }
+            const data = JSON.parse(rawData)
+            const track = new Track(this.player, data)
+            queue.addTrack(track)
+
+            if (!queue.playing) {
+                await queue.play()
+            }
         })
         this.player.on('queueEnd', async (queue: Queue<IQueue>) => {
             const his = await this.redisClient.sMembers(RedisKeys.HISTORY)
