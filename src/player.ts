@@ -55,6 +55,10 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
     }
 
     searchResult.playlist ? queue.addTracks(searchResult.tracks) : queue.addTrack(searchResult.tracks[0])
+    await discordClient.redisClient.sAdd('history', JSON.stringify({
+        title: query,
+        username: interaction.user.username
+    }))
 
     const title = searchResult.playlist ? searchResult.playlist.title : searchResult.tracks[0].title
     const emb = await musicEmbed(discordClient, 'Play Command', title, interaction.user)
@@ -118,7 +122,7 @@ export async function nowPlaying(discordClient: DiscordClient, interaction: Chat
 
 export async function history(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ ephemeral: true })
-    const history = discordClient.getHistory()
+    const history = await discordClient.getHistory()
     if (history.length == 0) {
         const emb = await musicEmbed(discordClient, 'History command', 'Empty history', interaction.user)
         await interaction.editReply({
