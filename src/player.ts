@@ -2,6 +2,7 @@ import {QueryType} from 'discord-player'
 import {ChatInputCommandInteraction, TextChannel} from 'discord.js'
 import {DiscordClient} from './client'
 import {musicEmbed} from './embed'
+import {deleteInteractionReply} from './utils'
 
 export async function play(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
     const guild = discordClient.client.guilds.cache.get(interaction.guildId)
@@ -24,9 +25,7 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
             ephemeral: true
         })
 
-        setTimeout(() => {
-            interaction.deleteReply()
-        }, 10000)
+        deleteInteractionReply(interaction)
 
         return
     }
@@ -47,9 +46,7 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
             ephemeral: true
         })
 
-        setTimeout(() => {
-            interaction.deleteReply()
-        }, 10000)
+        deleteInteractionReply(interaction)
 
         return
     }
@@ -67,9 +64,7 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
         ephemeral: true
     })
 
-    setTimeout(() => {
-        interaction.deleteReply()
-    }, 10000)
+    deleteInteractionReply(interaction)
 
     if (!queue.playing) {
         await queue.play()
@@ -89,9 +84,7 @@ export async function skip(discordClient: DiscordClient, interaction: ChatInputC
         embeds: [emb]
     })
 
-    setTimeout(() => {
-        interaction.deleteReply()
-    }, 10000)
+    deleteInteractionReply(interaction)
 }
 
 export async function nowPlaying(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
@@ -103,9 +96,7 @@ export async function nowPlaying(discordClient: DiscordClient, interaction: Chat
             ephemeral: true
         })
 
-        setTimeout(() => {
-            interaction.deleteReply()
-        }, 10000)
+        deleteInteractionReply(interaction)
 
         return
     }
@@ -115,9 +106,7 @@ export async function nowPlaying(discordClient: DiscordClient, interaction: Chat
         ephemeral: true
     })
 
-    setTimeout(() => {
-        interaction.deleteReply()
-    }, 10000)
+    deleteInteractionReply(interaction)
 }
 
 export async function history(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
@@ -129,9 +118,7 @@ export async function history(discordClient: DiscordClient, interaction: ChatInp
             embeds: [emb]
         })
 
-        setTimeout(() => {
-            interaction.deleteReply()
-        }, 10000)
+        deleteInteractionReply(interaction)
 
         return
     }
@@ -141,7 +128,5 @@ export async function history(discordClient: DiscordClient, interaction: ChatInp
         embeds: [emb]
     })
 
-    setTimeout(() => {
-        interaction.deleteReply()
-    }, 10000)
+    deleteInteractionReply(interaction)
 }
