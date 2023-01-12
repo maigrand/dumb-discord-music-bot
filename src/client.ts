@@ -1,5 +1,5 @@
 import {Client, Guild, IntentsBitField, Partials, TextChannel} from 'discord.js'
-import {Player, QueryType, Queue, Track} from 'discord-player'
+import {Player, QueryType, Queue} from 'discord-player'
 import {queueInit, redisOptions} from '../options.json'
 import {musicEmbed} from './embed'
 import {createClient} from 'redis'
@@ -62,7 +62,7 @@ export class DiscordClient {
             //
         })
         this.player.on('queueEnd', async (queue: Queue<IQueue>) => {
-            const his = await this.redisClient.sMembers('history')
+            const his = await this.redisClient.sMembers(RedisKeys.HISTORY)
             const hisElem = JSON.parse(his[Math.floor(Math.random() * his.length)])
 
             const searchResult = await this.player.search(hisElem.title, {
@@ -96,31 +96,24 @@ export class DiscordClient {
 
     private currentTrack: ICurrentTrack
 
-    private history: ICurrentTrack[] = []
-
     public getCurrentTrack(): ICurrentTrack {
         return this.currentTrack
     }
 
     public setCurrentTrack(currentTrack: ICurrentTrack): void {
         this.currentTrack = currentTrack
-        //this.history.push(currentTrack)
-        // if (this.history.length > 20) {
-        //     this.history.shift()
-        // }
     }
 
     public async getHistory(): Promise<ICurrentTrack[]> {
-        const hisFromRedis = await this.redisClient.sMembers('history')
-        const his: ICurrentTrack[] = []
-        for (const el of hisFromRedis) {
-            const element = JSON.parse(el)
-            his.push({
+        const redisHistory = await this.redisClient.sMembers(RedisKeys.HISTORY)
+        const historyTracks: ICurrentTrack[] = []
+        for (const rawElement of redisHistory) {
+            const element = JSON.parse(rawElement)
+            historyTracks.push({
                 title: element.title,
                 username: element.username
             })
         }
-        return his
-        //return this.history
+        return historyTracks
     }
 }

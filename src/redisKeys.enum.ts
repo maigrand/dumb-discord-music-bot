@@ -1,0 +1,3 @@
+enum RedisKeys {
+    HISTORY = 'history'
+}
