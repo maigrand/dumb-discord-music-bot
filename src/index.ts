@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import {DiscordClient} from './client'
-import {Events} from 'discord.js'
+import {Events, ActivityType } from 'discord.js'
 import {commandsNames} from './register-slash-commands'
 import {history, nowPlaying, play, skip} from './player'
 
@@ -12,6 +12,9 @@ const start = async () => {
         client.on(Events.ClientReady, async (e) => {
             const d = new Date()
             console.log(`${d.toUTCString()} ready ${client.user.tag}`)
+            client.user.setPresence({
+                activities: [{name: 'music', type: ActivityType.Listening}]
+            })
         })
 
         client.on(Events.InteractionCreate, async (interaction) => {
