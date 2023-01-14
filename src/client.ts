@@ -52,7 +52,7 @@ export class DiscordClient {
         this.player.on('trackStart', async (queue: Queue<IQueue>, track) => {
             const guildMember = queue.guild.members.cache.get(track.requestedBy.id) ?? await queue.guild.members.fetch(track.requestedBy.id)
             const user = guildMember.user
-            const emb = await musicEmbed(this, 'Now playing', track.title, user)
+            const emb = await musicEmbed(this, 'Now playing', track.title, user, track.thumbnail)
             await queue.metadata.channel.send({embeds: [emb]})
             this.currentTrack = transformTrack(track)
         })

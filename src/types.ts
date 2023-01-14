@@ -17,8 +17,3 @@ export type ITrack = {
     requestedBy: User
     source: TrackSource
 }
-
-export type IHistoryTrack = {
-    titleKey: string
-    track: ITrack
-}

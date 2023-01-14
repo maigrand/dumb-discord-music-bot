@@ -3,8 +3,8 @@ import {ChatInputCommandInteraction, TextChannel, User} from 'discord.js'
 import {DiscordClient} from './client'
 import {musicEmbed} from './embed'
 import {deleteInteractionReply, transformTrack} from './utils'
-import {IHistoryTrack, ITrack} from './types'
-import {musicHistoryGetAll, musicHistoryPush, musicQueuePop, musicQueuePush} from './redisMethods'
+import {ITrack} from './types'
+import {musicHistoryGetAll, musicHistoryPush, musicQueuePop, musicQueuePush, trackPush} from './redisMethods'
 
 export async function play(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
     const guild = discordClient.client.guilds.cache.get(interaction.guildId)
@@ -47,12 +47,9 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
 
     for (const track of searchResult.tracks) {
         const iTrack: ITrack = transformTrack(track)
-        const iHistoryTrack: IHistoryTrack = {
-            titleKey: track.title,
-            track: iTrack
-        }
+        await trackPush(discordClient.redisClient, iTrack)
         await musicQueuePush(discordClient.redisClient, guild.id, iTrack)
-        await musicHistoryPush(discordClient.redisClient, guild.id, iHistoryTrack)
+        await musicHistoryPush(discordClient.redisClient, guild.id, iTrack)
         if (!searchResult.playlist) {
             break
         }

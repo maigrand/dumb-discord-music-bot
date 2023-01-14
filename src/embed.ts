@@ -1,7 +1,7 @@
 import {EmbedBuilder, User} from 'discord.js'
 import {DiscordClient} from './client'
 
-export async function musicEmbed(discordClient: DiscordClient, title, description, user: User): Promise<EmbedBuilder> {
+export async function musicEmbed(discordClient: DiscordClient, title, description, user: User, thumbnail?: string): Promise<EmbedBuilder> {
     const embBuilder = new EmbedBuilder();
     embBuilder.setColor([255,140,0])
     embBuilder.setTitle(title)
@@ -15,6 +15,9 @@ export async function musicEmbed(discordClient: DiscordClient, title, descriptio
         text: user.username,
         iconURL: user.displayAvatarURL() ?? undefined
     })
+    if (thumbnail) {
+        embBuilder.setThumbnail(thumbnail)
+    }
 
     return embBuilder
 }

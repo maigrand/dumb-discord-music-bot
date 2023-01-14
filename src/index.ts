@@ -2,7 +2,7 @@ import 'dotenv/config'
 import {DiscordClient} from './client'
 import {Events, ActivityType } from 'discord.js'
 import {commandsNames} from './register-slash-commands'
-import {history, nowPlaying, play, skip} from './player'
+import {nowPlaying, play, skip, history} from './player'
 
 const start = async () => {
     try {

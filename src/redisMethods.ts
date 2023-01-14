@@ -1,18 +1,27 @@
-import {getHistoryKey, getQueueKey} from './redisKeys.enum'
-import {IHistoryTrack, ITrack} from './types'
+import {getHistoryKey, getQueueKey, getTrackKey} from './redisKeys'
+import {ITrack} from './types'
+
+export async function trackPush(redisClient, iTrack: ITrack) {
+    const rKey = getTrackKey(iTrack.title)
+    await redisClient.set(rKey, JSON.stringify(iTrack))
+}
 
 export async function musicQueuePush(redisClient, guildId: string, track: ITrack) {
     const rKey = getQueueKey(guildId)
-    await redisClient.rPush(rKey, JSON.stringify(track))
+    await redisClient.rPush(rKey, track.title)
 }
 
 export async function musicQueuePop(redisClient, guildId: string): Promise<ITrack> {
     const rKey = getQueueKey(guildId)
-    const rawTrack = await redisClient.lPop(rKey)
-    if (!rawTrack) {
+    const trackTitle = await redisClient.lPop(rKey)
+    if (!trackTitle) {
         return null
     }
-    return JSON.parse(rawTrack)
+    const rawITrack = await redisClient.get(getTrackKey(trackTitle))
+    if (!rawITrack) {
+        return null
+    }
+    return JSON.parse(rawITrack)
 }
 
 export async function musicQueuePurge(redisClient, guildId: string) {
@@ -20,26 +29,32 @@ export async function musicQueuePurge(redisClient, guildId: string) {
     await redisClient.del(rKey)
 }
 
-export async function musicHistoryPush(redisClient, guildId: string, track: IHistoryTrack) {
+export async function musicHistoryPush(redisClient, guildId: string, track: ITrack) {
     const rKey = getHistoryKey(guildId)
-    await redisClient.sAdd(rKey, JSON.stringify(track))
+    await redisClient.sAdd(rKey, track.title)
 }
 
 export async function musicHistoryGetRandom(redisClient, guildId: string): Promise<ITrack> {
     const rKey = getHistoryKey(guildId)
-    const rawHistoryTracks = await redisClient.sMembers(rKey)
-    const rawHistoryTrack = rawHistoryTracks[Math.floor(Math.random() * rawHistoryTracks.length)]
-    const historyTrack: IHistoryTrack = JSON.parse(rawHistoryTrack)
-    return historyTrack.track
+    const trackTitle = await redisClient.sRandMember(rKey)
+    if (!trackTitle) {
+        return null
+    }
+    const rawITrack = await redisClient.get(getTrackKey(trackTitle))
+    if (!rawITrack) {
+        return null
+    }
+    return JSON.parse(rawITrack)
 }
 
 export async function musicHistoryGetAll(redisClient, guildId: string): Promise<ITrack[]> {
     const rKey = getHistoryKey(guildId)
-    const rawHistory = await redisClient.sMembers(rKey)
-    const tracks: ITrack[] = []
-    for (const rawHistoryTrack of rawHistory) {
-        const historyTrack: IHistoryTrack = JSON.parse(rawHistoryTrack)
-        tracks.push(historyTrack.track)
+    const historyTrackIds = await redisClient.sMembers(rKey)
+    const iTracks: ITrack[] = []
+    for (const historyTrackId of historyTrackIds) {
+        const rawITrack = await redisClient.get(getTrackKey(historyTrackId))
+        const iTrack = JSON.parse(rawITrack)
+        iTracks.push(iTrack)
     }
-    return tracks
+    return iTracks
 }
