@@ -1,20 +1,13 @@
 import {Client, Guild, IntentsBitField, Partials, TextChannel} from 'discord.js'
-import {Player, QueryType, Queue, Track} from 'discord-player'
+import {Player, Queue, Track} from 'discord-player'
 import {queueInit, redisOptions} from '../options.json'
 import {musicEmbed} from './embed'
 import {createClient} from 'redis'
-import {RedisKeys} from './redisKeys.enum'
+import {IQueue, ITrack} from './types'
+import {transformTrack} from './utils'
+import {musicHistoryGetRandom, musicQueuePop, musicQueuePurge} from './redisMethods'
 
 const TOKEN = process.env.DISCORD_TOKEN
-
-type IQueue = {
-    channel: TextChannel | null
-}
-
-type ICurrentTrack = {
-    title: string
-    username: string
-}
 
 export class DiscordClient {
     constructor () {
@@ -47,6 +40,8 @@ export class DiscordClient {
 
     public player = new Player(this.client)
 
+    public currentTrack: ITrack
+
     private registerPlayerEvents() {
         this.player.on('error', (queue, error) => {
             console.log(`[${queue.guild.name}] Error emitted from the queue: ${error.message}`)
@@ -59,34 +54,35 @@ export class DiscordClient {
             const user = guildMember.user
             const emb = await musicEmbed(this, 'Now playing', track.title, user)
             await queue.metadata.channel.send({embeds: [emb]})
-            await this.setCurrentTrack({title: track.title, username: user.username})
+            this.currentTrack = transformTrack(track)
         })
         this.player.on('trackEnd', async (queue: Queue<IQueue>, trackEnd) => {
-            const rawData = await this.redisClient.lPop(RedisKeys.QUEUE)
-            if (!rawData) {
+            const iTrack: ITrack = await musicQueuePop(this.redisClient, queue.guild.id)
+            if (!iTrack) {
                 return
             }
-            const data = JSON.parse(rawData)
-            const track = new Track(this.player, data)
+            const track = new Track(this.player, iTrack)
             queue.addTrack(track)
-
             if (!queue.playing) {
                 await queue.play()
             }
         })
         this.player.on('queueEnd', async (queue: Queue<IQueue>) => {
-            const his = await this.redisClient.sMembers(RedisKeys.HISTORY)
-            const hisElem = JSON.parse(his[Math.floor(Math.random() * his.length)])
-
-            const searchResult = await this.player.search(hisElem.title, {
-                requestedBy: this.client.user,
-                searchEngine: QueryType.AUTO
-            })
-            searchResult.playlist ? queue.addTracks(searchResult.tracks) : queue.addTrack(searchResult.tracks[0])
-
+            const iTrack: ITrack = await musicHistoryGetRandom(this.redisClient, queue.guild.id)
+            if (!iTrack) {
+                return
+            }
+            const track = new Track(this.player, iTrack)
+            queue.addTrack(track)
             if (!queue.playing) {
                 await queue.play()
             }
+        })
+        this.player.on('botDisconnect', async (queue: Queue<IQueue>) => {
+            await musicQueuePurge(this.redisClient, queue.guild.id)
+        })
+        this.player.on('channelEmpty', async (queue: Queue<IQueue>) => {
+            await musicQueuePurge(this.redisClient, queue.guild.id)
         })
         this.redisClient.on('error', (e) => {
             console.error('Redis Client Error:', e)
@@ -105,28 +101,5 @@ export class DiscordClient {
                 channel: channel
             }
         })
-    }
-
-    private currentTrack: ICurrentTrack
-
-    public getCurrentTrack(): ICurrentTrack {
-        return this.currentTrack
-    }
-
-    public setCurrentTrack(currentTrack: ICurrentTrack): void {
-        this.currentTrack = currentTrack
-    }
-
-    public async getHistory(): Promise<ICurrentTrack[]> {
-        const redisHistory = await this.redisClient.sMembers(RedisKeys.HISTORY)
-        const historyTracks: ICurrentTrack[] = []
-        for (const rawElement of redisHistory) {
-            const element = JSON.parse(rawElement)
-            historyTracks.push({
-                title: element.title,
-                username: element.username
-            })
-        }
-        return historyTracks
     }
 }
