@@ -35,6 +35,9 @@ const commands = [
     },
     {
         name: 'history'
+    },
+    {
+        name: 'stop'
     }
 ]
 
@@ -52,7 +55,7 @@ const commands2 = [
         }),
     new SlashCommandBuilder()
         .setName('stop')
-        .setDescription('Stop a song!'),
+        .setDescription('Stop a queue!'),
     new SlashCommandBuilder()
         .setName('skip')
         .setDescription('Skip a song!'),

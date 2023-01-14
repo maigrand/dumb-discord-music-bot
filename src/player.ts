@@ -149,3 +149,20 @@ export async function history(discordClient: DiscordClient, interaction: ChatInp
 
     deleteInteractionReply(interaction)
 }
+
+export async function stop(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
+    const guild = discordClient.client.guilds.cache.get(interaction.guildId)
+    const channel = guild.channels.cache.get(interaction.channelId) as TextChannel
+    const queue = discordClient.getQueue(guild, channel)
+
+    queue.stop()
+    queue.destroy(true)
+
+    const emb = await musicEmbed(discordClient, 'Stop Command', 'Stopped', interaction.user)
+    await interaction.reply({
+        embeds: [emb],
+        ephemeral: true
+    })
+
+    deleteInteractionReply(interaction)
+}
