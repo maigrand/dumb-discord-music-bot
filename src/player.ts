@@ -69,6 +69,8 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
         const track = new Track(discordClient.player, iTrack)
         queue.addTrack(track)
         await queue.play()
+
+        discordClient.autoPlaylistCounter = 0
     }
 }
 

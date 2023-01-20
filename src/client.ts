@@ -1,6 +1,6 @@
 import {Client, Guild, IntentsBitField, Partials, TextChannel} from 'discord.js'
 import {Player, Queue, Track} from 'discord-player'
-import {queueInit, redisOptions} from '../options.json'
+import {queueInit, redisOptions, autoPlaylistCounter} from '../options.json'
 import {musicEmbed} from './embed'
 import {createClient} from 'redis'
 import {IQueue, ITrack} from './types'
@@ -42,6 +42,8 @@ export class DiscordClient {
 
     public currentTrack: ITrack
 
+    public autoPlaylistCounter: number = 0
+
     private registerPlayerEvents() {
         this.player.on('error', (queue, error) => {
             console.log(`[${queue.guild.name}] Error emitted from the queue: ${error.message}`)
@@ -72,8 +74,12 @@ export class DiscordClient {
             if (!iTrack) {
                 return
             }
+            if (this.autoPlaylistCounter >= autoPlaylistCounter) {
+                return
+            }
             const track = new Track(this.player, iTrack)
             queue.addTrack(track)
+            this.autoPlaylistCounter++
             if (!queue.playing) {
                 await queue.play()
             }
