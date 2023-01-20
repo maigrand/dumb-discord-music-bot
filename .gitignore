@@ -7,3 +7,4 @@ dist/
 .stignore
 .env
 options.json
+redis-data/
