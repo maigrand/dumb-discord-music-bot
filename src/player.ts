@@ -1,19 +1,27 @@
-import {Player, PlayerSearchResult, QueryType, Track} from 'discord-player'
-import {ChatInputCommandInteraction, TextChannel, User} from 'discord.js'
+import {ChatInputCommandInteraction, TextChannel} from 'discord.js'
 import {DiscordClient} from './client'
 import {musicEmbed} from './embed'
-import {deleteInteractionReply, transformTrack} from './utils'
-import {ITrack} from './types'
-import {musicHistoryGetAll, musicHistoryPush, musicQueuePop, musicQueuePush, trackPush} from './redisMethods'
+import {deleteInteractionReply} from './utils'
+import {autoPlaylistCounter} from '../options.json'
+import {
+    musicHistoryGetAll, musicHistoryGetRandom,
+    musicHistoryPush,
+    musicQueueGet,
+    musicQueuePop,
+    musicQueuePush,
+    trackPush
+} from './redisMethods'
+import {createAudioResourceFromYtdl, search} from './modules/youtubeModule'
+import {getVoiceConnection, joinVoiceChannel} from '@discordjs/voice'
 
 export async function play(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
     const guild = discordClient.client.guilds.cache.get(interaction.guildId)
-    const channel = guild.channels.cache.get(interaction.channelId) as TextChannel
+    const textChannel = guild.channels.cache.get(interaction.channelId) as TextChannel
+    const member = guild.members.cache.get(interaction.user.id) ?? await guild.members.fetch(interaction.user.id)
     const query = interaction.options.getString('query')
 
-    const searchResult = await search(discordClient.player, query, interaction.user)
-
-    if (!searchResult) {
+    const searchResults = await search(query, member.id, textChannel.id, interaction.guildId)
+    if (!searchResults) {
         const emb = await musicEmbed(discordClient, 'Play Command', `Track ${query} not found`, interaction.user)
         await interaction.reply({
             embeds: [emb],
@@ -25,15 +33,8 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
         return
     }
 
-    const queue = await discordClient.getQueue(guild, channel)
-    const member = guild.members.cache.get(interaction.user.id) ?? await guild.members.fetch(interaction.user.id)
-
-    try {
-        if (!queue.connection) {
-            await queue.connect(member.voice.channel)
-        }
-    } catch (e) {
-        await discordClient.player.deleteQueue(guild.id)
+    const voiceChannel = member.voice.channel
+    if (!voiceChannel) {
         const emb = await musicEmbed(discordClient, 'Play Command', 'Could not join your voice channel!', interaction.user)
         await interaction.reply({
             embeds: [emb],
@@ -45,74 +46,36 @@ export async function play(discordClient: DiscordClient, interaction: ChatInputC
         return
     }
 
-    for (const track of searchResult.tracks) {
-        const iTrack: ITrack = transformTrack(track)
-        await trackPush(discordClient.redisClient, iTrack)
-        await musicQueuePush(discordClient.redisClient, guild.id, iTrack)
-        await musicHistoryPush(discordClient.redisClient, guild.id, iTrack)
-        if (!searchResult.playlist) {
-            break
-        }
-    }
-
-    const title = searchResult.playlist ? searchResult.playlist.title : searchResult.tracks[0].title
+    const title = searchResults[0].title
     const emb = await musicEmbed(discordClient, 'Play Command', title, interaction.user)
     await interaction.reply({
         embeds: [emb],
         ephemeral: true
     })
-
     deleteInteractionReply(interaction)
 
-    if (!queue.playing) {
-        const iTrack: ITrack = await musicQueuePop(discordClient.redisClient, guild.id)
-        const track = new Track(discordClient.player, iTrack)
-        queue.addTrack(track)
-        await queue.play()
+    await trackPush(discordClient.redisClient, searchResults[0])
+    await musicQueuePush(discordClient.redisClient,guild.id, searchResults[0])
+    await musicHistoryPush(discordClient.redisClient,guild.id, searchResults[0])
 
-        discordClient.autoPlaylistCounter = 0
-    }
-}
-
-async function search(player: Player, query: string, user: User): Promise<PlayerSearchResult | null> {
-    const searchResult = await player
-        .search(query, {
-            requestedBy: user,
-            searchEngine: QueryType.AUTO
-        })
-        .catch((e) => {
-            console.error('searchResultError: ', e)
-            return null
+    let connection = getVoiceConnection(guild.id)
+    if (!connection) {
+        connection = joinVoiceChannel({
+            channelId: voiceChannel.id,
+            guildId: voiceChannel.guildId,
+            adapterCreator: voiceChannel.guild.voiceAdapterCreator,
         })
 
-    if (!searchResult || !searchResult.tracks.length) {
-        return null
+        await trackHandler(discordClient, guild.id)
+        connection.subscribe(discordClient.player)
     }
-
-    return searchResult
 }
 
 export async function skip(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
-    const guild = discordClient.client.guilds.cache.get(interaction.guildId)
-    const channel = guild.channels.cache.get(interaction.channelId) as TextChannel
-    const queue = await discordClient.getQueue(guild, channel)
-
-    queue.skip()
-
-    const currentTrack = discordClient.currentTrack
-    const emb = await musicEmbed(discordClient, 'Skip command', currentTrack.title, interaction.user)
-    await interaction.reply({
-        embeds: [emb]
-    })
-
-    deleteInteractionReply(interaction)
-}
-
-export async function nowPlaying(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
-    const currentTrack = discordClient.currentTrack
-    if (!currentTrack) {
-        const emb = await musicEmbed(discordClient, 'Now playing command', 'Nothing played', interaction.user)
-        await interaction.reply( {
+    const connection = getVoiceConnection(interaction.guildId)
+    if (!connection) {
+        const emb = await musicEmbed(discordClient, 'Skip Command', 'No song is playing', interaction.user)
+        await interaction.reply({
             embeds: [emb],
             ephemeral: true
         })
@@ -121,50 +84,138 @@ export async function nowPlaying(discordClient: DiscordClient, interaction: Chat
 
         return
     }
-    const emb = await musicEmbed(discordClient, 'Now playing command', `${currentTrack.title} requested by ${currentTrack.requestedBy.username}`, interaction.user)
-    await interaction.reply({
-        embeds: [emb],
-        ephemeral: true
-    })
 
-    deleteInteractionReply(interaction)
-}
-
-export async function history(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true })
-    const history = await musicHistoryGetAll(discordClient.redisClient, interaction.guildId)
-    if (history.length == 0) {
-        const emb = await musicEmbed(discordClient, 'History command', 'Empty history', interaction.user)
-        await interaction.editReply({
-            embeds: [emb]
+    const iAudioResource = await musicQueueGet(discordClient.redisClient, interaction.guild.id)
+    if (!iAudioResource) {
+        const emb = await musicEmbed(discordClient, 'Skip Command', 'No song in next', interaction.user)
+        await interaction.reply({
+            embeds: [emb],
+            ephemeral: true
         })
 
         deleteInteractionReply(interaction)
 
         return
     }
-    const interactionContent = history.map((track, index) => `${index+1}) ${track.title} requested by ${track.requestedBy.username}\n`)
+
+    await trackHandler(discordClient, interaction.guildId)
+
+    const emb = await musicEmbed(discordClient, 'Skip Command', iAudioResource.title, interaction.user)
+    await interaction.reply({
+        embeds: [emb],
+        ephemeral: true
+    })
+    deleteInteractionReply(interaction)
+}
+
+export async function nowPlaying(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
+    const connection = getVoiceConnection(interaction.guildId)
+    if (!connection) {
+        const emb = await musicEmbed(discordClient, 'Now Playing Command', 'No song is playing', interaction.user)
+        await interaction.reply({
+            embeds: [emb],
+            ephemeral: true
+        })
+
+        deleteInteractionReply(interaction)
+
+        return
+    }
+
+    const currentIAudioResource = discordClient.getCurrentTrack(interaction.guildId)
+    if (!currentIAudioResource) {
+        const emb = await musicEmbed(discordClient, 'Now Playing Command', 'No song is playing', interaction.user)
+        await interaction.reply({
+            embeds: [emb],
+            ephemeral: true
+        })
+
+        deleteInteractionReply(interaction)
+
+        return
+    }
+
+    const guild = interaction.guild
+    const member = guild.members.cache.get(currentIAudioResource.requesterUserId) ?? await guild.members.fetch(currentIAudioResource.requesterUserId)
+    const emb = await musicEmbed(discordClient, 'Now Playing Command', `${currentIAudioResource.title} requested by ${member.displayName}`, interaction.user)
+    await interaction.reply({
+        embeds: [emb],
+        ephemeral: true
+    })
+    deleteInteractionReply(interaction)
+}
+
+export async function history(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply({ ephemeral: true })
+    const history = await musicHistoryGetAll(discordClient.redisClient, interaction.guild.id)
+
+    if (!history) {
+        const emb = await musicEmbed(discordClient, 'History Command', 'No history', interaction.user)
+        await interaction.reply({
+            embeds: [emb],
+            ephemeral: true
+        })
+
+        deleteInteractionReply(interaction)
+
+        return
+    }
+
+    const guild = interaction.guild
+    let interactionContent = ''
+    for (const audioResource of history) {
+        const member = guild.members.cache.get(audioResource.requesterUserId) ?? await guild.members.fetch(audioResource.requesterUserId)
+        interactionContent += `${audioResource.title} requested by ${member.displayName}\n`
+    }
     const emb = await musicEmbed(discordClient, 'History command', interactionContent.toString(), interaction.user)
     await interaction.editReply({
-        embeds: [emb]
+        embeds: [emb],
     })
 
     deleteInteractionReply(interaction)
 }
 
 export async function stop(discordClient: DiscordClient, interaction: ChatInputCommandInteraction) {
-    const guild = discordClient.client.guilds.cache.get(interaction.guildId)
-    const channel = guild.channels.cache.get(interaction.channelId) as TextChannel
-    const queue = discordClient.getQueue(guild, channel)
+    const connection = getVoiceConnection(interaction.guildId)
+    if (!connection) {
+        const emb = await musicEmbed(discordClient, 'Stop Command', 'No song is playing', interaction.user)
+        await interaction.reply({
+            embeds: [emb],
+            ephemeral: true
+        })
 
-    queue.stop()
-    queue.destroy(true)
+        deleteInteractionReply(interaction)
+
+        return
+    }
+
+    discordClient.player.stop()
+    connection.destroy()
 
     const emb = await musicEmbed(discordClient, 'Stop Command', 'Stopped', interaction.user)
     await interaction.reply({
         embeds: [emb],
         ephemeral: true
     })
-
     deleteInteractionReply(interaction)
+}
+
+export async function trackHandler(discordClient: DiscordClient, guildId: string) {
+    const iAudioResource = await musicQueuePop(discordClient.redisClient, guildId)
+    if (iAudioResource) {
+        discordClient.setCurrentTrack(iAudioResource)
+        const resource = createAudioResourceFromYtdl(iAudioResource)
+        discordClient.player.play(resource)
+    } else {
+        if (discordClient.autoPlaylistCounter < autoPlaylistCounter) {
+            const randomIAudioResource = await musicHistoryGetRandom(discordClient.redisClient, guildId)
+            const resource = createAudioResourceFromYtdl(randomIAudioResource)
+            discordClient.player.play(resource)
+            discordClient.autoPlaylistCounter++
+        } else {
+            discordClient.player.stop()
+            const connection = getVoiceConnection(guildId)
+            connection.destroy()
+        }
+    }
 }

@@ -1,19 +1,10 @@
-import {TextChannel, User} from 'discord.js'
-import {TrackSource} from 'discord-player'
-
-export type IQueue = {
-    channel: TextChannel | null
-}
-
-export type ITrack = {
-    id: string
-    description: string
+export type IAudioResource = {
+    videoId: string
     title: string
-    author: string
+    channelTitle: string
+    duration: number
     url: string
-    thumbnail: string
-    duration: string
-    views: number
-    requestedBy: User
-    source: TrackSource
+    requesterUserId: string
+    requesterTextChannelId: string
+    requesterGuildId: string
 }
