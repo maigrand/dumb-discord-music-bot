@@ -1,28 +1,38 @@
 # Dumb Discord Music Bot
-The Dumb Discord Music Bot is a simple bot for playing music in your Discord server. It uses the Discord.js library to provide basic music playing functionality.
+This is a basic Discord music bot project written in TypeScript using the Discord.js library. The bot allows users to play and control music tracks through chat commands. The bot connects to a Redis database to store the music queue and history.
 
 # Installation
-1. Install [Node.js](https://nodejs.org/en/download/)
-2. Install [FFmpeg](https://ffmpeg.org/download.html)
-3. Clone this repository
-4. Run `npm install` in the repository directory
-5. Create a Discord bot and invite it to your server
-6. Copy env.example to .env and fill in the required fields
-7. This bot required Youtube API key (https://developers.google.com/youtube/v3/getting-started)
-8. This bot required redis server (https://redis.io/download) (or just run via docker)
-9. Run `npm start register-commands` to register commands
-10. Run `npm start dev` to start the bot
+1. Clone this repository
+2. Run `npm install` in the repository directory
+3. Create a Discord bot and invite it to your server (https://discordjs.guide/preparations/setting-up-a-bot-application.html#creating-your-bot)
+4. Copy env.example to .env and fill in the required fields
+5. This bot required Youtube API key (https://developers.google.com/youtube/v3/getting-started)
+6. This bot required redis server (https://redis.io/download) (or just run via docker)
+7. Run `npm start register-commands` to register commands 
+8. Run `npm start dev` to start the bot
 
-### or this bot can work with docker (see docker-compose.yml)
+### or run via docker (see docker-compose.yml)
 
-# Usage
-To use the bot, simply invite it to your Discord server and type commands in any text channel:
+# Commands
+The bot recognizes the following slash commands:
 
-* /play
-* /stop
-* /skip
-* /nowplaying
-* /history
+* `/play` <query>: Searches for a track and adds it to the queue.
+* `/skip`: Skips the current track.
+* `/nowplaying`: Shows the currently playing track.
+* `/history`: Shows the previously played tracks.
+* `/stop`: Stops playing music and clears the queue.
+
+# Dependencies
+This project relies on the following dependencies:
+
+* `discord.js`: The main library for interacting with the Discord API.
+* `@discordjs/voice`: A library for connecting to voice channels and streaming audio.
+* `dotenv`: A library for loading environment variables from a .env file.
+* `redis`: A library for interacting with a Redis database.
+* `libsodium-wrappers`: a library for encryption and decryption
+* `ytdl-core`: A library for downloading and parsing YouTube videos.
+* `ffmpeg-static`: A library for audio encoding
+* `axios`: A library for interact with the YouTube API
 
 # Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
