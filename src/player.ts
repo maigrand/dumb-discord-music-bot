@@ -206,6 +206,7 @@ export async function trackHandler(discordClient: DiscordClient, guildId: string
         discordClient.setCurrentTrack(iAudioResource)
         const resource = createAudioResourceFromYtdl(iAudioResource)
         discordClient.player.play(resource)
+        discordClient.autoPlaylistCounter = 0
     } else {
         if (discordClient.autoPlaylistCounter < autoPlaylistCounter) {
             const randomIAudioResource = await musicHistoryGetRandom(discordClient.redisClient, guildId)
