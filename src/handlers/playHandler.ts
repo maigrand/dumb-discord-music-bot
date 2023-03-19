@@ -1,6 +1,6 @@
 import {ChatInputCommandInteraction, Guild} from 'discord.js'
 import {createAudioResourceFromPlaydl, search} from '@/modules/youtubeModule'
-import {AudioPlayer, getVoiceConnection, joinVoiceChannel} from '@discordjs/voice'
+import {AudioPlayer, AudioPlayerStatus, getVoiceConnection, joinVoiceChannel} from '@discordjs/voice'
 import {trackGet, trackPush} from '@/redisClient'
 import {networkStateChangeHandler} from '@/handlers/networkStateChangeHandler'
 
@@ -56,4 +56,14 @@ export async function playHandler(interaction: ChatInputCommandInteraction, guil
     await interaction.editReply({
         content: 'Added!',
     })
+
+    if (player.state.status === AudioPlayerStatus.Idle) {
+        const track = await trackGet(guild.id)
+        if (!track) {
+            return
+        }
+        const resource = await createAudioResourceFromPlaydl(track.url, guild.id)
+
+        player.play(resource)
+    }
 }
