@@ -1,24 +1,39 @@
 {
   "compilerOptions": {
     "lib": [
-      "es2020"
+      "esnext"
     ],
-    "module": "commonjs",
-    "target": "es2020",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "incremental": true,
-    "noImplicitAny": false,
-    "moduleResolution": "node",
     "sourceMap": true,
-    "outDir": "build",
     "baseUrl": "src",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "resolveJsonModule": true
+    "rootDir": "src",
+    "outDir": "build",
+    "paths": {
+      "@/*": ["*"]
+    },
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    // Strict Checks
+    "skipLibCheck": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "useUnknownInCatchVariables": true,
+    // Linter Checks
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    //"exactOptionalPropertyTypes": true,
+
   },
   "include": [
-    "src/**/*.ts"
+    "src"
   ],
   "exclude": [
     "node_modules"

@@ -1,13 +1,14 @@
-import axios from 'axios'
-import ytdl from 'ytdl-core'
-
-import {IAudioResource} from '../types'
+import playdl from 'play-dl'
 import {createAudioResource} from '@discordjs/voice'
+import {Track, TrackMetadata} from '@/types'
+import axios from 'axios'
+import assert from 'node:assert/strict'
 
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY!
 const YOUTUBE_API_BASE_URL = 'https://www.googleapis.com/youtube/v3'
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY
+assert(YOUTUBE_API_KEY, 'YOUTUBE_API_KEY is not defined')
 
-export async function search(query: string, requesterUserId: string, requesterTextChannelId: string, requesterGuildId: string) {
+export async function search(query: string, requesterUserId: string) {
     const searchParams = new URLSearchParams()
     searchParams.set('part', 'snippet')
     searchParams.set('type', 'video')
@@ -17,21 +18,35 @@ export async function search(query: string, requesterUserId: string, requesterTe
     const url = `${YOUTUBE_API_BASE_URL}/search?${searchParams.toString()}`
     const res = await axios.get(url)
 
-    const iAudioResources: IAudioResource[] = []
+    const tracks: Track[] = []
     for (const item of res.data.items) {
         const videoDetails = await getVideoDetails(item.id.videoId)
-        iAudioResources.push({
+        tracks.push({
             videoId: item.id.videoId,
             title: item.snippet.title,
             channelTitle: item.snippet.channelTitle,
             duration: YTDurationToSeconds(videoDetails.items[0].contentDetails.duration),
             url: YTVideoIdToUrl(item.id.videoId),
             requesterUserId,
-            requesterTextChannelId,
-            requesterGuildId,
         })
     }
-    return iAudioResources
+    return tracks
+}
+
+export async function createAudioResourceFromPlaydl(trackUrl: string, guildId: string) {
+    const trackMetadata: TrackMetadata = {
+        guildId
+    }
+    const stream = await playdl.stream(trackUrl)
+    const resource = await createAudioResource<TrackMetadata>(stream.stream, {
+        inputType: stream.type,
+        inlineVolume: true,
+        metadata: trackMetadata,
+    })
+
+    resource.volume?.setVolume(0.2)
+
+    return resource
 }
 
 async function getVideoDetails(videoId: string) {
@@ -45,38 +60,27 @@ async function getVideoDetails(videoId: string) {
     return res.data
 }
 
-function YTDurationToSeconds(duration): number {
-    let match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+function YTDurationToSeconds(duration: string) {
+    const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
 
-    match = match.slice(1).map(function(x) {
+    if (!match) {
+        return 0
+    }
+
+    const transformMatch = match.slice(1).map((x) => {
         if (x != null) {
             return x.replace(/\D/, '');
         }
-    });
+        return x
+    })
 
-    const hours = (parseInt(match[0]) || 0);
-    const minutes = (parseInt(match[1]) || 0);
-    const seconds = (parseInt(match[2]) || 0);
+    const hours = transformMatch[0] ? parseInt(transformMatch[0]) : 0
+    const minutes = transformMatch[1] ? parseInt(transformMatch[1]) : 0
+    const seconds = transformMatch[2] ? parseInt(transformMatch[2]) : 0
 
     return hours * 3600 + minutes * 60 + seconds;
 }
 
 function YTVideoIdToUrl(videoId: string) {
     return `https://www.youtube.com/watch?v=${videoId}`
-}
-
-export function createAudioResourceFromYtdl(iAudioResource: IAudioResource) {
-    const ytdlResource = ytdl(iAudioResource.url, {
-        filter: 'audioonly',
-        highWaterMark: 1 << 30,
-        //quality: 'highestaudio',
-        dlChunkSize: 0,
-    })
-    const resource = createAudioResource<IAudioResource>(ytdlResource, {
-        inlineVolume: true,
-        metadata: iAudioResource,
-    })
-    resource.volume.setVolume(0.1)
-
-    return resource
 }

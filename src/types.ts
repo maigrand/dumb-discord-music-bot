@@ -1,10 +1,12 @@
-export type IAudioResource = {
+export type Track = {
     videoId: string
     title: string
     channelTitle: string
     duration: number
     url: string
     requesterUserId: string
-    requesterTextChannelId: string
-    requesterGuildId: string
+}
+
+export type TrackMetadata = {
+    guildId: string
 }

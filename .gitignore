@@ -5,6 +5,4 @@ node_modules/
 dist/
 .stfolder/
 .stignore
-.env
-options.json
 redis-data/

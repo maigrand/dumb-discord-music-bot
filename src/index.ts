@@ -1,18 +1,75 @@
-import 'dotenv/config'
-import {DiscordClient} from './client'
-import {Events, ActivityType } from 'discord.js'
-import {commandsNames} from './register-slash-commands'
-import {nowPlaying, play, skip, history, stop} from './player'
+import {ActivityType, Client, Events, IntentsBitField, Partials} from 'discord.js'
+import assert from 'node:assert/strict'
+import {playHandler} from '@/handlers/playHandler'
+import {AudioPlayer, AudioPlayerStatus, getVoiceConnection, NoSubscriberBehavior} from '@discordjs/voice'
+import {Track, TrackMetadata} from '@/types'
+import {trackGet} from '@/redisClient'
+import { createAudioResourceFromPlaydl } from './modules/youtubeModule'
+import {stopHandler} from '@/handlers/stopHandler'
 
-const start = async () => {
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN
+assert(DISCORD_TOKEN, 'DISCORD_TOKEN is not defined')
+
+const start = async() => {
     try {
-        const discordClient = new DiscordClient()
-        const client = discordClient.client
+        const client = new Client({
+            partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+            intents: [
+                IntentsBitField.Flags.Guilds,
+                IntentsBitField.Flags.GuildMessages,
+                // IntentsBitField.Flags.GuildMessageReactions,
+                // IntentsBitField.Flags.GuildMembers,
+                // IntentsBitField.Flags.GuildPresences,
+                IntentsBitField.Flags.GuildVoiceStates,
+                IntentsBitField.Flags.MessageContent,
+            ],
+        })
 
-        client.on(Events.ClientReady, async (e) => {
+        await client.login(DISCORD_TOKEN)
+
+        const players = new Map<string, AudioPlayer>()
+
+        for (const guild of client.guilds.cache.values()) {
+            const player = new AudioPlayer({
+                behaviors: {
+                    noSubscriber: NoSubscriberBehavior.Play,
+                }
+            })
+
+            player.on('error', (e) => {
+                throw e
+            })
+
+            player.on(AudioPlayerStatus.Idle, async (oldState, newState) => {
+                if (oldState.status === AudioPlayerStatus.Playing && newState.status === AudioPlayerStatus.Idle) {
+                    const trackMetadata = oldState.resource.metadata as TrackMetadata
+                    const connection = getVoiceConnection(trackMetadata.guildId)
+                    if (!connection) {
+                        return
+                    }
+                    const track: Track | null = await trackGet(trackMetadata.guildId)
+                    if (!track) {
+                        return
+                    }
+                    const resource = await createAudioResourceFromPlaydl(track.url, trackMetadata.guildId)
+                    if (!resource) {
+                        return
+                    }
+                    player.play(resource)
+                }
+            })
+
+            players.set(guild.id, player)
+        }
+
+        client.on(Events.ClientReady, () => {
+            const clientUser = client.user
+            if (!clientUser) {
+                return
+            }
             const d = new Date()
-            console.log(`${d.toUTCString()} ready ${client.user.tag}`)
-            client.user.setPresence({
+            console.log(`${d.toUTCString()} ready ${clientUser.tag}`)
+            clientUser.setPresence({
                 activities: [{name: 'music', type: ActivityType.Listening}]
             })
         })
@@ -21,26 +78,23 @@ const start = async () => {
             if (!interaction.isChatInputCommand()) {
                 return
             }
-
-            if (!commandsNames.includes(interaction.commandName)) {
+            if (!interaction.guildId) {
                 return
             }
+            const guild = client.guilds.cache.get(interaction.guildId)
+            if (!guild) {
+                return
+            }
+            const player = players.get(guild.id)
 
             if (interaction.commandName === 'play') {
-                await play(discordClient, interaction)
-            } else if (interaction.commandName === 'skip') {
-                await skip(discordClient, interaction)
-            } else if (interaction.commandName === 'nowplaying') {
-                await nowPlaying(discordClient, interaction)
-            } else if (interaction.commandName === 'history') {
-                await history(discordClient, interaction)
+                await playHandler(interaction, guild, player!)
             } else if (interaction.commandName === 'stop') {
-                await stop(discordClient, interaction)
+                await stopHandler(interaction, guild, player!)
             }
         })
-
     } catch (e) {
-        console.error(e)
+        throw e
     }
 }
 
@@ -50,3 +104,4 @@ process.on('unhandledRejection', (e) => {
 })
 
 start()
+    .catch((e) => console.error(e))
