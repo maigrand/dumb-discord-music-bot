@@ -6,6 +6,7 @@ import {Track, TrackMetadata} from '@/types'
 import {trackGet} from '@/redisClient'
 import { createAudioResourceFromPlaydl } from '@/modules/youtubeModule'
 import {stopHandler} from '@/handlers/stopHandler'
+import {emptyChannelHandler} from '@/handlers/emptyChannelHandler'
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 assert(DISCORD_TOKEN, 'DISCORD_TOKEN is not defined')
@@ -62,14 +63,11 @@ const start = async() => {
             players.set(guild.id, player)
         }
 
-        client.on(Events.ClientReady, () => {
+        client.on('ready',  () => {
             const clientUser = client.user
-            if (!clientUser) {
-                return
-            }
             const d = new Date()
-            console.log(`${d.toUTCString()} ready ${clientUser.tag}`)
-            clientUser.setPresence({
+            console.log(`${d.toUTCString()} ready ${clientUser?.tag}`)
+            clientUser?.setPresence({
                 activities: [{name: 'music', type: ActivityType.Listening}]
             })
         })
@@ -92,6 +90,18 @@ const start = async() => {
             } else if (interaction.commandName === 'stop') {
                 await stopHandler(interaction, guild, player!)
             }
+        })
+
+        client.on(Events.VoiceStateUpdate, async (oldState) => {
+            const guild = client.guilds.cache.get(oldState.guild.id)
+            if (!guild) {
+                return
+            }
+            const player = players.get(guild.id)
+            if (!player) {
+                return
+            }
+            await emptyChannelHandler(guild, player)
         })
     } catch (e) {
         throw e
