@@ -6,3 +6,5 @@ dist/
 .stfolder/
 .stignore
 redis-data/
+build/
+tsconfig.tsbuildinfo
