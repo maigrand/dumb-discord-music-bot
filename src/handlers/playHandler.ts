@@ -2,6 +2,7 @@ import {ChatInputCommandInteraction, Guild} from 'discord.js'
 import {createAudioResourceFromPlaydl, search} from '@/modules/youtubeModule'
 import {AudioPlayer, getVoiceConnection, joinVoiceChannel} from '@discordjs/voice'
 import {trackGet, trackPush} from '@/redisClient'
+import {networkStateChangeHandler} from '@/handlers/networkStateChangeHandler'
 
 export async function playHandler(interaction: ChatInputCommandInteraction, guild: Guild, player: AudioPlayer) {
     await interaction.deferReply({ephemeral: true})
@@ -28,6 +29,15 @@ export async function playHandler(interaction: ChatInputCommandInteraction, guil
             guildId: voiceChannel.guildId,
             adapterCreator: voiceChannel.guild.voiceAdapterCreator,
         })
+
+        connection.on('stateChange', (oldState, newState) => {
+            const oldNetworking = Reflect.get(oldState, 'networking')
+            const newNetworking = Reflect.get(newState, 'networking')
+
+            oldNetworking?.off('stateChange', networkStateChangeHandler)
+            newNetworking?.on('stateChange', networkStateChangeHandler)
+        })
+
         connection.subscribe(player)
 
         const track = await trackGet(guild.id)

@@ -4,7 +4,7 @@ import {playHandler} from '@/handlers/playHandler'
 import {AudioPlayer, AudioPlayerStatus, getVoiceConnection, NoSubscriberBehavior} from '@discordjs/voice'
 import {Track, TrackMetadata} from '@/types'
 import {trackGet} from '@/redisClient'
-import { createAudioResourceFromPlaydl } from './modules/youtubeModule'
+import { createAudioResourceFromPlaydl } from '@/modules/youtubeModule'
 import {stopHandler} from '@/handlers/stopHandler'
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
