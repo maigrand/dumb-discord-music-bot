@@ -110,3 +110,9 @@ export async function getQueue(guildId: string) {
     const rawData = await redisClient.lRange(key, 0, -1)
     return rawData
 }
+
+export async function getHistory(guildId: string) {
+    const key = getHistoryKey(guildId)
+    const rawData = await redisClient.sMembers(key)
+    return rawData
+}

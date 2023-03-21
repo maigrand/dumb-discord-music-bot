@@ -10,6 +10,7 @@ import {emptyChannelHandler} from '@/handlers/emptyChannelHandler'
 import {skipHandler} from '@/handlers/skipHandler'
 import {musicEmbed} from '@/util'
 import {queueHandler} from '@/handlers/queueHandler'
+import {historyHandler} from '@/handlers/historyHandler'
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 assert(DISCORD_TOKEN, 'DISCORD_TOKEN is not defined')
@@ -65,6 +66,8 @@ const start = async() => {
                 await skipHandler(clientUser!, interaction, player!)
             } else if (interaction.commandName === 'queue') {
                 await queueHandler(clientUser!, interaction, guild)
+            } else if (interaction.commandName === 'history') {
+                await historyHandler(clientUser!, interaction, guild)
             }
         })
 
