@@ -64,7 +64,7 @@ const start = async() => {
             } else if (interaction.commandName === 'skip') {
                 await skipHandler(clientUser!, interaction, player!)
             } else if (interaction.commandName === 'queue') {
-                await queueHandler(guild)
+                await queueHandler(clientUser!, interaction, guild)
             }
         })
 
