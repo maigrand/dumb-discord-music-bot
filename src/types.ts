@@ -9,4 +9,5 @@ export type Track = {
 
 export type TrackMetadata = {
     guildId: string
+    textChannelId: string
 }

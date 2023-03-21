@@ -33,9 +33,10 @@ export async function search(query: string, requesterUserId: string) {
     return tracks
 }
 
-export async function createAudioResourceFromPlaydl(trackUrl: string, guildId: string) {
+export async function createAudioResourceFromPlaydl(trackUrl: string, guildId: string, textChannelId: string) {
     const trackMetadata: TrackMetadata = {
-        guildId
+        guildId,
+        textChannelId
     }
     const stream = await playdl.stream(trackUrl)
     const resource = await createAudioResource<TrackMetadata>(stream.stream, {

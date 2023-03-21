@@ -1,10 +1,11 @@
-import {ChatInputCommandInteraction, Guild} from 'discord.js'
+import {ChatInputCommandInteraction, Guild, User} from 'discord.js'
 import {createAudioResourceFromPlaydl, search} from '@/modules/youtubeModule'
 import {AudioPlayer, AudioPlayerStatus, getVoiceConnection, joinVoiceChannel} from '@discordjs/voice'
-import {trackGet, trackPush} from '@/redisClient'
+import {setCurrentTrack, trackPop, trackPush} from '@/redisClient'
 import {networkStateChangeHandler} from '@/handlers/networkStateChangeHandler'
+import {deleteInteractionReply, musicEmbed} from '@/util'
 
-export async function playHandler(interaction: ChatInputCommandInteraction, guild: Guild, player: AudioPlayer) {
+export async function playHandler(botUser: User, interaction: ChatInputCommandInteraction, guild: Guild, player: AudioPlayer) {
     await interaction.deferReply({ephemeral: true})
     const query = await interaction.options.getString('query')
     if (!query) {
@@ -12,6 +13,13 @@ export async function playHandler(interaction: ChatInputCommandInteraction, guil
     }
     const tracks = await search(query, interaction.user.id)
     if (!tracks || tracks.length === 0) {
+        const emb = await musicEmbed(botUser, 'Play Command', `Track ${query} not found`, interaction.user)
+        await interaction.editReply({
+            embeds: [emb],
+        })
+
+        deleteInteractionReply(interaction)
+
         return
     }
 
@@ -20,6 +28,13 @@ export async function playHandler(interaction: ChatInputCommandInteraction, guil
     const member = guild.members.cache.get(interaction.user.id) ?? await guild.members.fetch(interaction.user.id)
     const voiceChannel = member.voice.channel
     if (!voiceChannel) {
+        const emb = await musicEmbed(botUser, 'Play Command', 'Could not join your voice channel!', interaction.user)
+        await interaction.editReply({
+            embeds: [emb],
+        })
+
+        deleteInteractionReply(interaction)
+
         return
     }
     let connection = getVoiceConnection(guild.id)
@@ -40,30 +55,36 @@ export async function playHandler(interaction: ChatInputCommandInteraction, guil
 
         connection.subscribe(player)
 
-        const track = await trackGet(guild.id)
+        const track = await trackPop(guild.id)
         if (!track) {
             return
         }
-        const resource = await createAudioResourceFromPlaydl(track.url, guild.id)
-
+        const resource = await createAudioResourceFromPlaydl(track.url, guild.id, interaction.channelId)
+        await setCurrentTrack(guild.id, track)
         player.play(resource)
+
+        const emb = await musicEmbed(botUser, 'Play Command', `Playing: ${track.title}`, interaction.user)
         await interaction.editReply({
-            content: 'Playing!',
+            embeds: [emb],
         })
+        deleteInteractionReply(interaction)
+
         return
     }
 
+    const emb = await musicEmbed(botUser, 'Play Command', `Added: ${tracks[0]?.title}`, interaction.user)
     await interaction.editReply({
-        content: 'Added!',
+        embeds: [emb],
     })
+    deleteInteractionReply(interaction)
 
     if (player.state.status === AudioPlayerStatus.Idle) {
-        const track = await trackGet(guild.id)
+        const track = await trackPop(guild.id)
         if (!track) {
             return
         }
-        const resource = await createAudioResourceFromPlaydl(track.url, guild.id)
-
+        const resource = await createAudioResourceFromPlaydl(track.url, guild.id, interaction.channelId)
+        await setCurrentTrack(guild.id, track)
         player.play(resource)
     }
 }

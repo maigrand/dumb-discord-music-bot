@@ -1,19 +1,22 @@
-import {ChatInputCommandInteraction, Guild} from 'discord.js'
+import {ChatInputCommandInteraction, Guild, User} from 'discord.js'
 import {AudioPlayer, getVoiceConnection} from '@discordjs/voice'
+import {deleteInteractionReply, musicEmbed} from '@/util'
 
-export async function stopHandler(interaction: ChatInputCommandInteraction, guild: Guild, player: AudioPlayer) {
+export async function stopHandler(botUser: User, interaction: ChatInputCommandInteraction, guild: Guild, player: AudioPlayer) {
+    await interaction.deferReply({ ephemeral: true })
     const connection = getVoiceConnection(guild.id)
     if (!connection) {
-        await interaction.reply({
-            content: 'Not playing!',
-            ephemeral: true,
+        const emb = await musicEmbed(botUser, 'Stop Command', 'Not playing!', interaction.user)
+        await interaction.editReply({
+            embeds: [emb],
         })
         return
     }
     player.stop(true)
     connection.destroy()
-    await interaction.reply({
-        content: 'Stopped!',
-        ephemeral: true,
+    const emb = await musicEmbed(botUser, 'Stop Command', 'Stopped.', interaction.user)
+    await interaction.editReply({
+        embeds: [emb],
     })
+    deleteInteractionReply(interaction)
 }

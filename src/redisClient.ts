@@ -13,6 +13,7 @@ enum RedisKeys {
     QUEUE = 'queue',
     TRACKS = 'tracks',
     GUILDS = 'guilds',
+    CURRENT_TRACK = 'currentTrack'
 }
 
 const redisClient = createClient({
@@ -37,6 +38,10 @@ function getQueueKey(guildId: string) {
 
 function getHistoryKey(guildId: string) {
     return `${RedisKeys.GUILDS}:${guildId}:${RedisKeys.HISTORY}`
+}
+
+function getCurrentTrackKey(guildId: string) {
+    return `${RedisKeys.GUILDS}:${guildId}:${RedisKeys.CURRENT_TRACK}`
 }
 
 async function musicQueuePush(guildId: string, track: Track) {
@@ -73,11 +78,35 @@ export async function trackPush(guildId: string, track: Track) {
     await musicHistoryPush(guildId, track)
 }
 
-export async function trackGet(guildId: string) {
+export async function trackPop(guildId: string) {
     return await musicQueuePop(guildId)
 }
 
 export async function musicQueuePurge(guildId: string) {
     const key = getQueueKey(guildId)
     await redisClient.del(key)
+}
+
+export async function setCurrentTrack(guildId: string, track: Track) {
+    const key = getCurrentTrackKey(guildId)
+    await redisClient.set(key, track.title)
+}
+
+export async function getCurrentTrack(guildId: string) {
+    const key = getCurrentTrackKey(guildId);
+    const trackTitle = await redisClient.get(key)
+    if (!trackTitle) {
+        return null
+    }
+    const rawTrack = await redisClient.get(getTrackKey(trackTitle))
+    if (!rawTrack) {
+        return null
+    }
+    return JSON.parse(rawTrack) as Track
+}
+
+export async function getQueue(guildId: string) {
+    const key = getQueueKey(guildId)
+    const rawData = await redisClient.lRange(key, 0, -1)
+    return rawData
 }
