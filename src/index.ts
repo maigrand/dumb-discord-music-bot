@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {playHandler} from '@/handlers/playHandler'
 import {AudioPlayer, AudioPlayerStatus, getVoiceConnection, NoSubscriberBehavior} from '@discordjs/voice'
 import {Track, TrackMetadata} from '@/types'
-import {getCurrentTrack, trackPop} from '@/redisClient'
+import {getCurrentTrack, setCurrentTrack, trackPop} from '@/redisClient'
 import {createAudioResourceFromPlaydl} from '@/modules/youtubeModule'
 import {stopHandler} from '@/handlers/stopHandler'
 import {emptyChannelHandler} from '@/handlers/emptyChannelHandler'
@@ -108,6 +108,7 @@ function createPlayers(client: Client): Map<string, AudioPlayer> {
                 if (!track) {
                     return
                 }
+                await setCurrentTrack(trackMetadata.guildId, track)
                 const resource = await createAudioResourceFromPlaydl(track.url, trackMetadata.guildId, trackMetadata.textChannelId)
                 if (!resource) {
                     return
