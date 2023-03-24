@@ -82,6 +82,15 @@ export async function trackPop(guildId: string) {
     return await musicQueuePop(guildId)
 }
 
+export async function trackGet(title: string) {
+    const key = getTrackKey(title)
+    const rawTrack = await redisClient.get(key)
+    if (!rawTrack) {
+        return null
+    }
+    return JSON.parse(rawTrack) as Track
+}
+
 export async function musicQueuePurge(guildId: string) {
     const key = getQueueKey(guildId)
     await redisClient.del(key)

@@ -1,6 +1,7 @@
 import {ChatInputCommandInteraction, Guild, User} from 'discord.js'
 import {AudioPlayer, getVoiceConnection} from '@discordjs/voice'
 import {deleteInteractionReply, musicEmbed} from '@/util'
+import {musicQueuePurge} from '@/redisClient'
 
 export async function stopHandler(botUser: User, interaction: ChatInputCommandInteraction, guild: Guild, player: AudioPlayer) {
     await interaction.deferReply({ ephemeral: true })
@@ -14,6 +15,7 @@ export async function stopHandler(botUser: User, interaction: ChatInputCommandIn
     }
     player.stop(true)
     connection.destroy()
+    await musicQueuePurge(guild.id)
     const emb = await musicEmbed(botUser, 'Stop Command', 'Stopped.', interaction.user)
     await interaction.editReply({
         embeds: [emb],

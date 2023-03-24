@@ -1,4 +1,14 @@
-import {ActivityType, Client, Events, IntentsBitField, Partials, TextChannel} from 'discord.js'
+import {
+    ActivityType,
+    Client,
+    Events,
+    IntentsBitField,
+    Partials,
+    REST,
+    SlashCommandBuilder,
+    TextChannel,
+    Routes
+} from 'discord.js'
 import assert from 'node:assert/strict'
 import {playHandler} from '@/handlers/playHandler'
 import {AudioPlayer, AudioPlayerStatus, getVoiceConnection, NoSubscriberBehavior} from '@discordjs/voice'
@@ -11,9 +21,13 @@ import {skipHandler} from '@/handlers/skipHandler'
 import {musicEmbed} from '@/util'
 import {queueHandler} from '@/handlers/queueHandler'
 import {historyHandler} from '@/handlers/historyHandler'
+import {autoPlaylistHandler} from '@/handlers/autoPlaylistHandler'
 
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN!
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID!
+
 assert(DISCORD_TOKEN, 'DISCORD_TOKEN is not defined')
+assert(DISCORD_CLIENT_ID, 'DISCORD_CLIENT_ID is not defined')
 
 const start = async() => {
     try {
@@ -41,6 +55,8 @@ const start = async() => {
                 activities: [{name: 'music', type: ActivityType.Listening}]
             })
             players = createPlayers(client)
+            registerCommands(client)
+                .catch((e) => console.error(e))
         })
 
         client.on(Events.InteractionCreate, async (interaction) => {
@@ -68,6 +84,8 @@ const start = async() => {
                 await queueHandler(clientUser!, interaction, guild)
             } else if (interaction.commandName === 'history') {
                 await historyHandler(clientUser!, interaction, guild)
+            } else if (interaction.commandName === 'autoplaylist') {
+                await autoPlaylistHandler(clientUser!, interaction, guild, player!)
             }
         })
 
@@ -148,6 +166,57 @@ function createPlayers(client: Client): Map<string, AudioPlayer> {
     }
 
     return players
+}
+
+async function registerCommands(client: Client) {
+    const rest = new REST({version: '10'}).setToken(DISCORD_TOKEN)
+
+    const commands = [
+        new SlashCommandBuilder()
+            .setName('play')
+            .setDescription('Play a song!')
+            .addStringOption(option => {
+                option.setName('query')
+                option.setDescription('query')
+                option.setRequired(true)
+                return option
+            }),
+        new SlashCommandBuilder()
+            .setName('stop')
+            .setDescription('Stop a queue!'),
+        new SlashCommandBuilder()
+            .setName('skip')
+            .setDescription('Skip a song!'),
+        new SlashCommandBuilder()
+            .setName('nowplaying')
+            .setDescription('Now playing song'),
+        new SlashCommandBuilder()
+            .setName('history')
+            .setDescription('Show history'),
+        new SlashCommandBuilder()
+            .setName('queue')
+            .setDescription('Show queue'),
+        new SlashCommandBuilder()
+            .setName('autoplaylist')
+            .setDescription('autoplaylist')
+            .addIntegerOption(option => {
+                option.setName('count')
+                option.setDescription('count')
+                option.setRequired(true)
+                return option
+            })
+    ]
+
+    console.log('Started refreshing application [/] commands.')
+
+    rest.put(Routes.applicationCommands(DISCORD_CLIENT_ID), { body: [] })
+        .then(() => console.log('Successfully deleted all global application commands.'))
+        .catch(console.error)
+
+    for (const guild of client.guilds.cache.values()) {
+        rest.put(Routes.applicationGuildCommands(DISCORD_CLIENT_ID, guild.id), { body: commands })
+            .then(() => console.log('Successfully reloaded application [/] commands.'))
+    }
 }
 
 process.on('unhandledRejection', (e) => {
