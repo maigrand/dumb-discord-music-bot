@@ -13,7 +13,7 @@ import assert from 'node:assert/strict'
 import {playHandler} from '@/handlers/playHandler'
 import {AudioPlayer, AudioPlayerStatus, getVoiceConnection, NoSubscriberBehavior} from '@discordjs/voice'
 import {Track, TrackMetadata} from '@/types'
-import {getCurrentTrack, setCurrentTrack, trackPop} from '@/redisClient'
+import {getCurrentTrack, getQueue, setCurrentTrack, trackPop} from '@/redisClient'
 import {createAudioResourceFromPlaydl} from '@/modules/youtubeModule'
 import {stopHandler} from '@/handlers/stopHandler'
 import {emptyChannelHandler} from '@/handlers/emptyChannelHandler'
@@ -157,7 +157,8 @@ function createPlayers(client: Client): Map<string, AudioPlayer> {
                 return
             }
 
-            const emb = await musicEmbed(botUser, 'Now Playing', currentTrack.title, requesterMember.user)
+            const trackTitles = await getQueue(trackMetadata.guildId)
+            const emb = await musicEmbed(botUser, 'Now Playing', `${currentTrack.title}\nIn queue: ${trackTitles.length}`, requesterMember.user)
             const textChannel = guild.channels.cache.get(trackMetadata.textChannelId) as TextChannel
             await textChannel.send({embeds: [emb]})
         })

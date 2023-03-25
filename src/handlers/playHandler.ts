@@ -1,7 +1,7 @@
 import {ChatInputCommandInteraction, Guild, User} from 'discord.js'
 import {createAudioResourceFromPlaydl, search} from '@/modules/youtubeModule'
 import {AudioPlayer, AudioPlayerStatus, getVoiceConnection, joinVoiceChannel} from '@discordjs/voice'
-import {setCurrentTrack, trackPop, trackPush} from '@/redisClient'
+import {getQueue, setCurrentTrack, trackPop, trackPush} from '@/redisClient'
 import {networkStateChangeHandler} from '@/handlers/networkStateChangeHandler'
 import {deleteInteractionReply, musicEmbed} from '@/util'
 
@@ -72,7 +72,8 @@ export async function playHandler(botUser: User, interaction: ChatInputCommandIn
         return
     }
 
-    const emb = await musicEmbed(botUser, 'Play Command', `Added: ${tracks[0]?.title}`, interaction.user)
+    const trackTitles = await getQueue(guild.id)
+    const emb = await musicEmbed(botUser, 'Play Command', `Added: ${tracks[0]?.title}\nIn queue: ${trackTitles.length}`, interaction.user)
     await interaction.editReply({
         embeds: [emb],
     })
