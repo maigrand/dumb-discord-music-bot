@@ -1,9 +1,8 @@
 import {ChatInputCommandInteraction, Guild, User} from 'discord.js'
-import {createAudioResourceFromPlaydl, search} from '@/modules/youtubeModule'
-import {AudioPlayer, AudioPlayerStatus, getVoiceConnection, joinVoiceChannel} from '@discordjs/voice'
-import {getQueue, setCurrentTrack, trackPop, trackPush} from '@/redisClient'
-import {networkStateChangeHandler} from '@/handlers/networkStateChangeHandler'
-import {deleteInteractionReply, musicEmbed} from '@/util'
+import {search} from '@/modules/youtubeModule'
+import {AudioPlayer, AudioPlayerStatus, getVoiceConnection} from '@discordjs/voice'
+import {getQueue, trackPush} from '@/redisClient'
+import {createVoiceConnection, deleteInteractionReply, musicEmbed, popAndPlay} from '@/util'
 
 export async function playHandler(botUser: User, interaction: ChatInputCommandInteraction, guild: Guild, player: AudioPlayer) {
     await interaction.deferReply({ephemeral: true})
@@ -23,7 +22,9 @@ export async function playHandler(botUser: User, interaction: ChatInputCommandIn
         return
     }
 
-    await trackPush(guild.id, tracks[0]!)
+    for (const track of tracks) {
+        await trackPush(guild.id, track)
+    }
 
     const member = guild.members.cache.get(interaction.user.id) ?? await guild.members.fetch(interaction.user.id)
     const voiceChannel = member.voice.channel
@@ -39,29 +40,12 @@ export async function playHandler(botUser: User, interaction: ChatInputCommandIn
     }
     let connection = getVoiceConnection(guild.id)
     if (!connection) {
-        connection = joinVoiceChannel({
-            channelId: voiceChannel.id,
-            guildId: voiceChannel.guildId,
-            adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-        })
+        await createVoiceConnection(voiceChannel, player)
 
-        connection.subscribe(player)
-
-        connection.on('stateChange', (oldState, newState) => {
-            const oldNetworking = Reflect.get(oldState, 'networking')
-            const newNetworking = Reflect.get(newState, 'networking')
-
-            oldNetworking?.off('stateChange', networkStateChangeHandler)
-            newNetworking?.on('stateChange', networkStateChangeHandler)
-        })
-
-        const track = await trackPop(guild.id)
+        const track = await popAndPlay(guild.id, player, interaction.channelId)
         if (!track) {
             return
         }
-        const resource = await createAudioResourceFromPlaydl(track.url, guild.id, interaction.channelId)
-        await setCurrentTrack(guild.id, track)
-        player.play(resource)
 
         const emb = await musicEmbed(botUser, 'Play Command', `Playing: ${track.title}`, interaction.user)
         await interaction.editReply({
@@ -80,12 +64,6 @@ export async function playHandler(botUser: User, interaction: ChatInputCommandIn
     deleteInteractionReply(interaction)
 
     if (player.state.status === AudioPlayerStatus.Idle) {
-        const track = await trackPop(guild.id)
-        if (!track) {
-            return
-        }
-        const resource = await createAudioResourceFromPlaydl(track.url, guild.id, interaction.channelId)
-        await setCurrentTrack(guild.id, track)
-        player.play(resource)
+        await popAndPlay(guild.id, player, interaction.channelId)
     }
 }

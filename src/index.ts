@@ -208,15 +208,11 @@ async function registerCommands(client: Client) {
             })
     ]
 
-    console.log('Started refreshing application [/] commands.')
-
-    rest.put(Routes.applicationCommands(DISCORD_CLIENT_ID), { body: [] })
-        .then(() => console.log('Successfully deleted all global application commands.'))
-        .catch(console.error)
+    console.log('Started refreshing guild application [/] commands.')
 
     for (const guild of client.guilds.cache.values()) {
         rest.put(Routes.applicationGuildCommands(DISCORD_CLIENT_ID, guild.id), { body: commands })
-            .then(() => console.log('Successfully reloaded application [/] commands.'))
+            .then(() => console.log('Successfully reloaded guild application [/] commands.'))
     }
 }
 
