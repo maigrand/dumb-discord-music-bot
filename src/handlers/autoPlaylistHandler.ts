@@ -1,10 +1,7 @@
 import {ChatInputCommandInteraction, Guild, User} from 'discord.js'
-import {getHistory, setCurrentTrack, trackGet, trackPop, trackPush} from '@/redisClient'
-import {deleteInteractionReply, musicEmbed} from '@/util'
-import {AudioPlayer, AudioPlayerStatus, getVoiceConnection, joinVoiceChannel} from '@discordjs/voice'
-import {networkStateChangeHandler} from '@/handlers/networkStateChangeHandler'
-import {createAudioResourceFromPlaydl} from '@/modules/youtubeModule'
-
+import {getHistory, trackGet, trackPush} from '@/redisClient'
+import {createVoiceConnection, deleteInteractionReply, musicEmbed, popAndPlay} from '@/util'
+import {AudioPlayer, AudioPlayerStatus, getVoiceConnection} from '@discordjs/voice'
 export async function autoPlaylistHandler(botUser: User, interaction: ChatInputCommandInteraction, guild: Guild, player: AudioPlayer) {
     await interaction.deferReply({ephemeral: true})
 
@@ -64,38 +61,15 @@ export async function autoPlaylistHandler(botUser: User, interaction: ChatInputC
 
     let connection = getVoiceConnection(guild.id)
     if (!connection) {
-        connection = joinVoiceChannel({
-            channelId: voiceChannel.id,
-            guildId: voiceChannel.guildId,
-            adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-        })
+        await createVoiceConnection(voiceChannel, player)
 
-        connection.subscribe(player)
-
-        connection.on('stateChange', (oldState, newState) => {
-            const oldNetworking = Reflect.get(oldState, 'networking')
-            const newNetworking = Reflect.get(newState, 'networking')
-
-            oldNetworking?.off('stateChange', networkStateChangeHandler)
-            newNetworking?.on('stateChange', networkStateChangeHandler)
-        })
-
-        const track = await trackPop(guild.id)
+        const track = await popAndPlay(guild.id, player, interaction.channelId)
         if (!track) {
             return
         }
-        const resource = await createAudioResourceFromPlaydl(track.url, guild.id, interaction.channelId)
-        await setCurrentTrack(guild.id, track)
-        player.play(resource)
     }
 
     if (player.state.status === AudioPlayerStatus.Idle) {
-        const track = await trackPop(guild.id)
-        if (!track) {
-            return
-        }
-        const resource = await createAudioResourceFromPlaydl(track.url, guild.id, interaction.channelId)
-        await setCurrentTrack(guild.id, track)
-        player.play(resource)
+        await popAndPlay(guild.id, player, interaction.channelId)
     }
 }
