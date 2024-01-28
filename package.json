@@ -23,6 +23,7 @@
     "sodium": "^3.0.2"
   },
   "devDependencies": {
+    "@types/node": "^20.11.9",
     "dotenv": "^16.0.3",
     "nodemon": "^2.0.21",
     "tsc-alias": "^1.8.3",
